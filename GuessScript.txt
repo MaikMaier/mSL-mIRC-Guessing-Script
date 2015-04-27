@@ -112,4 +112,3 @@ alias -l lookUpUsernameFromGuessnumber {
   var %Username $readini(GuessNumbersToUsers.ini, Correlation, $1)
   return %Username
 }
-
