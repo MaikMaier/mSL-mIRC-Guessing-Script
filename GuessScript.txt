@@ -18,6 +18,7 @@ alias -l lookUpPoints {
   var %points $readini(Points.ini,%topic,Points)
   return %points
 }
+
 alias doaddpoints {
   if ($3 !isnum) { echo 2 -st $3 is not a number. It needs to be a number. | halt }
   var %topic $+($1,.,$2)
@@ -39,80 +40,91 @@ on *:text:!points:#:{
   msg # $nick has $readini(Points.ini,$+(#,.,$nick),Points) total points.
 }
  
-on $*:text:/!points (add|remove)/Si:#:{
+on $*:text:/!points (add|remove)/Si:#: {
   if ($nick isop #) {
-	if ($0 < 3) { msg # Insufficient parameters: Use !points <add|remove> <user> [number] | return }
-	writeini -n Points.ini $+(#,.,$3) Points $calc($readini(Points.ini,$+(#,.,$3),Points) $iif($2 == add,+,-) $iif($4 isnum,$4,1))
-	{ msg $chan $3 now has $readini(Points.ini,$+(#,.,$3),Points) total points. }
+    if ($0 < 3) { 
+      msg # Insufficient parameters: Use !points <add|remove> <user> [number] | return 
+    }
+    writeini -n Points.ini $+(#,.,$3) Points $calc($readini(Points.ini,$+(#,.,$3),Points) $iif($2 == add,+,-) $iif($4 isnum,$4,1))
+    msg $chan $3 now has $readini(Points.ini, n, $+(#,.,$3),Points) total points. 
   }
   else { msg $chan This command is only available to moderators. }
 }
 
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
     from here on - new stuff ---------------------------------------------------------------------------------------------------------------------
-*/ -----------------------------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------------------
+*/ 
 
 on *:JOIN:#: {
-	var %topic $+($chan,.,$nick)
-	var %points $calc($readini(Points.ini,%topic,Points) + 0)
-	writeini -n Points.ini %topic Points %points
+  var %topic $+($chan,.,$nick)
+  if ($readini(Points.ini, n, %topic, Points) != $null) {
+    return
+  }
+  else {
+    writeini -n Points.ini %topic Points 0
+  }
 }
 
 on *:TEXT:!start:#: {
   if ($nick isop #) {
-	msg $chan A new round of guessing has started. You now got 5 minutes to guess how often VITALIC will die in this game.
-	startbetting
-	msg $chan You can use the command !guess <deathcount> to place your guess.
-	.timer1 1 300 endbetting 
-	.timer2 1 240 msg $chan 1 Minute left to place your guess.
+    if (%gameinprogess == 1) { msg # A game is already in progress. Please end it before starting a new one. | return }
+    msg $chan A new round of guessing has started. Viewers can now guess how often VITALIC will die in this game.
+    startbetting
+    msg $chan You can use the command !guess <deathcount> to make a guess.
+    .timer1 1 60 msg $chan 1 Minute left to place your guess.
+    .timer2 1 120 endbetting   
+    .timer3 1 122 msg $chan Guessing is now locked. %guesscount guesses were registered.
   }
   else { msg $chan Only moderators can start a new round. }
 }
 
-on *:TEXT:!guess:#: {
-	if ($0 < 1) { msg # Wrong use, you need to place a guess with: !guess <putyourguessnumberhere> | return }
-	if ($0 > 1) { msg # Wrong use, you need to place a guess with: !guess <putyourguessnumberhere> | return }
-	if ( $readini(Lock.ini, n, Lock, GuessingLock) == 0){
-		writeini -n Guesses.ini Guesses $nick $1
-		writeini -n GuessNumbersToUsers.ini Correlation $calc(lookUpNbrOfGuesses + 1) $nick
-		writeini -n Guesses.ini Guesscounter currentCount (lookUpNbrOfGuesses +1)
-	}
-	else { msg $chan Guessing is currently disabled. }
-  
+on *:TEXT:!guess &:#: {
+  if ($2- !isnum) { msg # Wrong use, you need to place a guess with: !guess <putyourguessnumberhere> | return }
+  if (%lock == 0) {
+    if ($readini(Guesses.ini, n, Voters, $nick) != 1) {
+      msg $chan Thanks for your guess $nick
+      writeini -n Guesses.ini Guesses $nick $2
+      writeini -n GuessNumbersToUsers.ini Correlation $calc($lookUpNbrOfGuesses + 1) $nick
+      writeini -n Guesses.ini Voters $nick 1
+      /inc %guesscount
+    }
+    else {
+      msg $chan I already got a guess from you $nick
+    }
+  }
+  else { msg $chan  Placing guesses is currently disabled. }
 }
 
-on *:TEXT:!result:#: {
-	var %computedGuesses = 1
-	var %totalNumberOfGuesses = $lookUpNbrOfGuesses
-	while (%computedGuesses < %totalNumberOfGuesses) {
-		var %currentUser = $readini(GuessNumbersToUsers.ini, Correlation, %computedGuesses) 
-		if($readini(Guesses.ini, Guesses, %currentUser) == $1){
-			msg $chan %currentuser Placed a correct Guess, congratulations.
-			writeini -n Points.ini $+(#,.,%currentUser) Points $calc($readini(Points.ini,$+(#,.,%currentUser),Points) + 1))
-		}	
-	}
-	msg $chan That's it, no more winners.
-	/remini Guesses.ini Guesses
-	/remini GuessNumbersToUsers.ini Correlation
+on *:TEXT:!result &:#: {
+  var %guessnumberToCompute = 1 
+  while (%guessnumberToCompute <= %guesscount) {
+    var %currentUser = $readini(GuessNumbersToUsers.ini, n, Correlation, %guessnumberToCompute) 
+    if ($readini(Guesses.ini, n, Guesses, %currentUser) == $2) {
+      msg $chan %currentuser guessed correctly, congratulations.
+      writeini -n Points.ini $+(#,.,%currentUser) Points $calc($readini(Points.ini,n, $+(#,.,%currentUser),Points) + 1)
+    }
+    /inc %guessnumberToCompute
+  }
+  msg $chan That's it, no more winners.
+  /remini Guesses.ini Guesses
+  /remini GuessNumbersToUsers.ini Correlation
+  /remini Guesses.ini Voters
+  set %gameinprogess 0
 	
 }
 
-
 alias -l startbetting {
-  $writeini -n Lock.ini Lock GuessingLock 0
-  $writeini -n Guesses.ini Guesscounter currentCount 0
+  set %lock 0
+  set %guesscount 0
+  set %gameinprogess 1
 }
 
 alias -l endbetting {
-   $writeini -n Lock.ini Lock GuessingLock 1
-   msg $chan The guessing Phase is now locked. 
-}
-
-alias -l lookUpNbrOfGuesses {
-  var %guesscount $readini(Guesses.ini, Guesscounter, currentCount)
-  return %guesscount
+   set %lock 1
 }
 
 alias -l add.pts {
-	writeini -n Points.ini $1 Points $calc($readini(Points.ini,$1,Points) + 1)
+  writeini -n Points.ini $1 Points $calc($readini(Points.ini, n, $1,Points) + 1)
 }
+
