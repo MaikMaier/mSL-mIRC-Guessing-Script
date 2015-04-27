@@ -1,3 +1,10 @@
+on *:TEXT:!mmr:#: { 
+  if ((%floodmmr) || ($($+(%,floodyoutube.,$nick),2))) { return }
+  set -u10 %floodmmr On
+  set -u30 %floodmmr. $+ $nick On
+  msg $chan  Solo MMR: 6113 Party MMR: 5695 $+
+}
+
 alias -l addPoints {
   if ($1 !isnum) { echo 2 -st $1 is not a number. It needs to be a number. | halt }
   var %topic $+($chan,.,$nick)
@@ -41,45 +48,48 @@ on $*:text:/!points (add|remove)/Si:#:{
   else { msg $chan This command is only available to moderators. }
 }
 
-; -----------------------------------------------------------------------------------------------------------------------------------------------
-; from here on - new stuff ----------------------------------------------------------------------------------------------------------------------
-; -----------------------------------------------------------------------------------------------------------------------------------------------
+/* -----------------------------------------------------------------------------------------------------------------------------------------------
+    from here on - new stuff ---------------------------------------------------------------------------------------------------------------------
+*/ -----------------------------------------------------------------------------------------------------------------------------------------------
 
-on $*:text:/!start:#:{
+on *:JOIN:#: {
+	var %topic $+($chan,.,$nick)
+	var %points $calc($readini(Points.ini,%topic,Points) + 0)
+	writeini -n Points.ini %topic Points %points
+}
+
+on *:TEXT:!start:#: {
   if ($nick isop #) {
-	msg $chan A new round of guessing has started. You now got 5 minutes to guess how often VITALIC will die in this Game.
+	msg $chan A new round of guessing has started. You now got 5 minutes to guess how often VITALIC will die in this game.
 	startbetting
 	msg $chan You can use the command !guess <deathcount> to place your guess.
-	/timer 1 300 endbetting 
+	.timer1 1 300 endbetting 
+	.timer2 1 240 msg $chan 1 Minute left to place your guess.
   }
   else { msg $chan Only moderators can start a new round. }
 }
 
-on $*:text:/!guess:#:{
+on *:TEXT:!guess:#: {
 	if ($0 < 1) { msg # Wrong use, you need to place a guess with: !guess <putyourguessnumberhere> | return }
 	if ($0 > 1) { msg # Wrong use, you need to place a guess with: !guess <putyourguessnumberhere> | return }
-	if ( $readini(Lock.ini, n, Lock, GuessingLock) = 0){
-		$writeini -n Guesses.ini Guesses $nick $1
-		
-		$writeini -n GuessNumbersToUsers.ini Correlation $calc(lookUpNbrOfGuesses + 1) $nick
-		$writeini -n Guesses.ini Guesscounter currentCount (lookUpNbrOfGuesses +1)
+	if ( $readini(Lock.ini, n, Lock, GuessingLock) == 0){
+		writeini -n Guesses.ini Guesses $nick $1
+		writeini -n GuessNumbersToUsers.ini Correlation $calc(lookUpNbrOfGuesses + 1) $nick
+		writeini -n Guesses.ini Guesscounter currentCount (lookUpNbrOfGuesses +1)
 	}
 	else { msg $chan Guessing is currently disabled. }
   
 }
 
-on $*:text:/!result:#:{
-	;i need to place a foreach here, which executes addpoints for every user that was right ($1 = readini - userguess)
+on *:TEXT:!result:#: {
 	var %computedGuesses = 1
-	var %totalNumberOfGuesses = lookUpNbrOfGuesses
-	while (%computedGuesses < totalNumberOfGuesses) {
-		var %currentUser = lookUpUsernameFromGuessnumber $+(%computedGuesses)
-		if($readini(Guesses.ini, Guesses, %currentUser) = $1){
+	var %totalNumberOfGuesses = $lookUpNbrOfGuesses
+	while (%computedGuesses < %totalNumberOfGuesses) {
+		var %currentUser = $readini(GuessNumbersToUsers.ini, Correlation, %computedGuesses) 
+		if($readini(Guesses.ini, Guesses, %currentUser) == $1){
 			msg $chan %currentuser Placed a correct Guess, congratulations.
 			writeini -n Points.ini $+(#,.,%currentUser) Points $calc($readini(Points.ini,$+(#,.,%currentUser),Points) + 1))
-		}
-		
-		
+		}	
 	}
 	msg $chan That's it, no more winners.
 	/remini Guesses.ini Guesses
@@ -103,12 +113,6 @@ alias -l lookUpNbrOfGuesses {
   return %guesscount
 }
 
-alias -l lookUpNbrOfGuesses {
-  var %guesscount $readini(Guesses.ini, Guesscounter, currentCount)
-  return %guesscount
-}
-
-alias -l lookUpUsernameFromGuessnumber {
-  var %Username $readini(GuessNumbersToUsers.ini, Correlation, $1)
-  return %Username
+alias -l add.pts {
+	writeini -n Points.ini $1 Points $calc($readini(Points.ini,$1,Points) + 1)
 }
