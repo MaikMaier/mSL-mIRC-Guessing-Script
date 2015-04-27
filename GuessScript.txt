@@ -1,0 +1,112 @@
+alias -l addPoints {
+  if ($1 !isnum) { echo 2 -st $1 is not a number. It needs to be a number. | halt }
+  var %topic $+($chan,.,$nick)
+  var %points $calc($readini(Points.ini,%topic,Points) + $1)
+  writeini -n Points.ini %topic Points %points
+  return %points
+}
+ 
+alias -l lookUpPoints {
+  var %topic $+($chan,.,$nick)
+  var %points $readini(Points.ini,%topic,Points)
+  return %points
+}
+alias doaddpoints {
+  if ($3 !isnum) { echo 2 -st $3 is not a number. It needs to be a number. | halt }
+  var %topic $+($1,.,$2)
+  var %points $calc($readini(Points.ini,%topic,Points) + $3)
+  writeini -n Points.ini %topic Points %points
+  echo -a Added points for %topic
+}
+ 
+alias dorempoints {
+  var %topic $+($1,.,$2)
+  remini -n Points.ini %topic Points
+  echo -a Removed points for %topic
+}
+ 
+on *:text:!points:#:{
+  if ((%floodpoints) || ($($+(%,floodpoints.,$nick),2))) { return }
+  set -u10 %floodpoints On
+  set -u30 %floodpoints. $+ $nick On
+  msg # $nick has $readini(Points.ini,$+(#,.,$nick),Points) total points.
+}
+ 
+on $*:text:/!points (add|remove)/Si:#:{
+  if ($nick isop #) {
+	if ($0 < 3) { msg # Insufficient parameters: Use !points <add|remove> <user> [number] | return }
+	writeini -n Points.ini $+(#,.,$3) Points $calc($readini(Points.ini,$+(#,.,$3),Points) $iif($2 == add,+,-) $iif($4 isnum,$4,1))
+	{ msg $chan $3 now has $readini(Points.ini,$+(#,.,$3),Points) total points. }
+  }
+  else { msg $chan This command is only available to moderators. }
+}
+
+; -----------------------------------------------------------------------------------------------------------------------------------------------
+; from here on - new stuff ----------------------------------------------------------------------------------------------------------------------
+; -----------------------------------------------------------------------------------------------------------------------------------------------
+
+on $*:text:/!start:#:{
+  if ($nick isop #) {
+	msg $chan A new round of guessing has started. You now got 5 minutes to guess how often VITALIC will die in this Game.
+	startbetting
+	msg $chan You can use the command !guess <deathcount> to place your guess.
+	/timer 1 300 endbetting 
+  }
+  else { msg $chan Only moderators can start a new round. }
+}
+
+on $*:text:/!guess:#:{
+	if ($0 < 1) { msg # Wrong use, you need to place a guess with: !guess <putyourguessnumberhere> | return }
+	if ($0 > 1) { msg # Wrong use, you need to place a guess with: !guess <putyourguessnumberhere> | return }
+	if ( $readini(Lock.ini, n, Lock, GuessingLock) = 0){
+		$writeini -n Guesses.ini Guesses $nick $1
+		
+		$writeini -n GuessNumbersToUsers.ini Correlation $calc(lookUpNbrOfGuesses + 1) $nick
+		$writeini -n Guesses.ini Guesscounter currentCount (lookUpNbrOfGuesses +1)
+	}
+	else { msg $chan Guessing is currently disabled. }
+  
+}
+
+on $*:text:/!result:#:{
+	;i need to place a foreach here, which executes addpoints for every user that was right ($1 = readini - userguess)
+	
+	/remini Guesses.ini Guesses
+	
+	
+	;i need a msg chan which announces the winners
+}
+
+
+alias -l startbetting {
+  $writeini -n Lock.ini Lock GuessingLock 0
+  $writeini -n Guesses.ini Guesscounter currentCount 0
+}
+
+alias -l endbetting {
+   $writeini -n Lock.ini Lock GuessingLock 1
+   msg $chan The guessing Phase is now locked. 
+}
+
+alias -l lookUpNbrOfGuesses {
+  var %guesscount $readini(Guesses.ini, Guesscounter, currentCount)
+  return %guesscount
+}
+
+alias -l lookUpNbrOfGuesses {
+  var %guesscount $readini(Guesses.ini, Guesscounter, currentCount)
+  return %guesscount
+}
+; -----------------------------------------------------------------------------------------------------------------------------------------------
+; from here on - Unusable stuff------------------------------------------------------------------------------------------------------------------
+; -----------------------------------------------------------------------------------------------------------------------------------------------
+
+on !*:join:#:{
+  $+(.timerpoints.,#,.,$nick) 0 300 add.pts $+(#,.,$nick)
+  add.pts $+(#,.,$nick)
+}
+on !*:part:#:$+(.timerpoints.,#,.,$nick) off
+alias -l add.pts {
+  writeini -n Points.ini $1 Points $calc($readini(Points.ini,$1,Points) + 1)
+}
+
