@@ -70,11 +70,21 @@ on $*:text:/!guess:#:{
 
 on $*:text:/!result:#:{
 	;i need to place a foreach here, which executes addpoints for every user that was right ($1 = readini - userguess)
-	
+	var %computedGuesses = 1
+	var %totalNumberOfGuesses = lookUpNbrOfGuesses
+	while (%computedGuesses < totalNumberOfGuesses) {
+		var %currentUser = lookUpUsernameFromGuessnumber $+(%computedGuesses)
+		if($readini(Guesses.ini, Guesses, %currentUser) = $1){
+			msg $chan %currentuser Placed a correct Guess, congratulations.
+			writeini -n Points.ini $+(#,.,%currentUser) Points $calc($readini(Points.ini,$+(#,.,%currentUser),Points) + 1))
+		}
+		
+		
+	}
+	msg $chan That's it, no more winners.
 	/remini Guesses.ini Guesses
+	/remini GuessNumbersToUsers.ini Correlation
 	
-	
-	;i need a msg chan which announces the winners
 }
 
 
@@ -97,13 +107,18 @@ alias -l lookUpNbrOfGuesses {
   var %guesscount $readini(Guesses.ini, Guesscounter, currentCount)
   return %guesscount
 }
+
+alias -l lookUpUsernameFromGuessnumber {
+  var %Username $readini(GuessNumbersToUsers.ini, Correlation, $1)
+  return %Username
+}
 ; -----------------------------------------------------------------------------------------------------------------------------------------------
 ; from here on - Unusable stuff------------------------------------------------------------------------------------------------------------------
 ; -----------------------------------------------------------------------------------------------------------------------------------------------
 
 on !*:join:#:{
   $+(.timerpoints.,#,.,$nick) 0 300 add.pts $+(#,.,$nick)
-  add.pts $+(#,.,$nick)
+  
 }
 on !*:part:#:$+(.timerpoints.,#,.,$nick) off
 alias -l add.pts {
