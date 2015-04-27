@@ -112,16 +112,4 @@ alias -l lookUpUsernameFromGuessnumber {
   var %Username $readini(GuessNumbersToUsers.ini, Correlation, $1)
   return %Username
 }
-; -----------------------------------------------------------------------------------------------------------------------------------------------
-; from here on - Unusable stuff------------------------------------------------------------------------------------------------------------------
-; -----------------------------------------------------------------------------------------------------------------------------------------------
-
-on !*:join:#:{
-  $+(.timerpoints.,#,.,$nick) 0 300 add.pts $+(#,.,$nick)
-  
-}
-on !*:part:#:$+(.timerpoints.,#,.,$nick) off
-alias -l add.pts {
-  writeini -n Points.ini $1 Points $calc($readini(Points.ini,$1,Points) + 1)
-}
 
