@@ -1,9 +1,28 @@
+/* -----------------------------------------------------------------------------------------------------------------------------------------------
+   mmr reporting system --------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------------------
+*/ 
+
+
 on *:TEXT:!mmr:#: { 
-  if ((%floodmmr) || ($($+(%,floodyoutube.,$nick),2))) { return }
+  if ((%floodmmr) || ($($+(%,floodmmr.,$nick),2))) { return }
   set -u10 %floodmmr On
   set -u30 %floodmmr. $+ $nick On
-  msg $chan  Solo MMR: 6113 Party MMR: 5695 $+
+  msg $chan  Solo MMR: %solo Party MMR: %party $+
 }
+
+on *:text:!mmr *:#: {
+  if ($nick isop #) {
+    if ($2 == solo) set %solo $3 
+    elseif ($2 == party) set %party $3
+  }
+}
+
+/* -----------------------------------------------------------------------------------------------------------------------------------------------
+    Guessing System ------------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------------------
+*/ 
+
 
 alias -l addPoints {
   if ($1 !isnum) { echo 2 -st $1 is not a number. It needs to be a number. | halt }
@@ -50,11 +69,6 @@ on $*:text:/!points (add|remove)/Si:#: {
   }
   else { msg $chan This command is only available to moderators. }
 }
-
-/* -----------------------------------------------------------------------------------------------------------------------------------------------
-    from here on - new stuff ---------------------------------------------------------------------------------------------------------------------
-   -----------------------------------------------------------------------------------------------------------------------------------------------
-*/ 
 
 on *:JOIN:#: {
   var %topic $+($chan,.,$nick)
@@ -132,4 +146,39 @@ alias -l endbetting {
 
 alias -l add.pts {
   writeini -n Points.ini $1 Points $calc($readini(Points.ini, n, $1,Points) + 1)
+}
+
+/* -----------------------------------------------------------------------------------------------------------------------------------------------
+    Help Section ---------------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------------------
+*/ 
+
+on *:TEXT:!help:#: { 
+  if (%floodhelp.basic) { return }
+  set -u180 %floodhelp.basic On
+  msg $chan  Please specify which help section you want by using !help guessing or !help mmr
+}
+
+on *:text:!help &:#: {
+  if ((%floodhelp. $+ $2)) { return }
+  set -u180 %floodhelp. $+ $2 On
+  if ($2 == mmr) {
+    if ($nick isop #) {
+      msg $chan $nick , you can set the Solo or Party MMR by useing "!mmr solo xxx" or "!mmr party xxx".
+      msg $chan Viewers cannot set mmr, they can view it by useing "!mmr" without parameters.
+    }
+    else {
+      msg $chan $nick , you can view VITALICs current mmr by using "!mmr".
+    }
+  }
+  if ($2 == guessing) {
+    if ($nick isop #) {
+      msg $chan $nick , you can start a new guessing round by using "!start". In the following 5 minutes, viewers will be allowed to guess VITALICs deathcount by using "!guess <number>".
+      msg $chan After the 5 min guess phase is over, you can provide the correct answer using "!result <deathcount>".
+    }
+    else {
+      msg $chan $nick , while guessing is allowed, you can place your guess using "!guess <deathcount>". If you guess correctly, you'll be awarded with 100 points.
+    }
+  }
+  
 }
