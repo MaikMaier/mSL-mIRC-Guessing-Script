@@ -72,9 +72,10 @@ on *:TEXT:!start:#: {
     msg $chan A new round of guessing has started. Viewers can now guess how often VITALIC will die in this game.
     startbetting
     msg $chan You can use the command !guess <deathcount> to make a guess.
-    .timer1 1 60 msg $chan 1 Minute left to place your guess.
-    .timer2 1 120 endbetting   
-    .timer3 1 122 msg $chan Guessing is now locked. %guesscount guesses were registered.
+    .timer1 1 180 msg $chan 2 Minutes left to place your guess.
+    .timer2 1 240 msg $chan 1 Minute left to place your guess.
+    .timer3 1 300 endbetting   
+    .timer4 1 302 msg $chan Guessing is now locked.
   }
   else { msg $chan Only moderators can start a new round. }
 }
@@ -85,7 +86,7 @@ on *:TEXT:!guess &:#: {
     if ($readini(Guesses.ini, n, Voters, $nick) != 1) {
       msg $chan Thanks for your guess $nick
       writeini -n Guesses.ini Guesses $nick $2
-      writeini -n GuessNumbersToUsers.ini Correlation $calc($lookUpNbrOfGuesses + 1) $nick
+      writeini -n GuessNumbersToUsers.ini Correlation $calc(%guesscount + 1) $nick
       writeini -n Guesses.ini Voters $nick 1
       /inc %guesscount
     }
@@ -98,15 +99,20 @@ on *:TEXT:!guess &:#: {
 
 on *:TEXT:!result &:#: {
   var %guessnumberToCompute = 1 
+  var %winnercount = 0
   while (%guessnumberToCompute <= %guesscount) {
     var %currentUser = $readini(GuessNumbersToUsers.ini, n, Correlation, %guessnumberToCompute) 
     if ($readini(Guesses.ini, n, Guesses, %currentUser) == $2) {
       msg $chan %currentuser guessed correctly, congratulations.
-      writeini -n Points.ini $+(#,.,%currentUser) Points $calc($readini(Points.ini,n, $+(#,.,%currentUser),Points) + 1)
+      writeini -n Points.ini $+(#,.,%currentUser) Points $calc($readini(Points.ini,n, $+(#,.,%currentUser),Points) + 100)
+      /inc %winnercount
     }
     /inc %guessnumberToCompute
   }
-  msg $chan That's it, no more winners.
+  if (%winnercount == null) { msg $chan Noone guessed correctly. Good luck next time. }
+  else {
+    msg $chan That's it, no more winners.
+  }
   /remini Guesses.ini Guesses
   /remini GuessNumbersToUsers.ini Correlation
   /remini Guesses.ini Voters
@@ -127,4 +133,3 @@ alias -l endbetting {
 alias -l add.pts {
   writeini -n Points.ini $1 Points $calc($readini(Points.ini, n, $1,Points) + 1)
 }
-
