@@ -77,6 +77,7 @@ on *:JOIN:#: {
   }
   else {
     writeini -n Points.ini %topic Points 0
+    writeini -n Points.ini %topic RedeemedHerorequests 0
   }
 }
 
@@ -123,7 +124,7 @@ on *:TEXT:!result &:#: {
     }
     /inc %guessnumberToCompute
   }
-  if (%winnercount == null) { msg $chan Noone guessed correctly. Good luck next time. }
+  if (%winnercount == 0) { msg $chan Noone guessed correctly. Good luck next time. }
   else {
     msg $chan That's it, no more winners.
   }
@@ -148,11 +149,55 @@ alias -l add.pts {
   writeini -n Points.ini $1 Points $calc($readini(Points.ini, n, $1,Points) + 1)
 }
 
+
+/* -----------------------------------------------------------------------------------------------------------------------------------------------
+    !herorequest section ---------------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------------------
+*/ 
+
+on *:TEXT:!herorequest &:#: { 
+  if (%floodherorequest) { return }
+  set -u180 %floodhelp.basic On
+  var %topic $+($chan,.,$nick)
+  var %points $readini(Points.ini,%topic,Points)
+  if (%points < 1000) {
+    msg $chan Sorry $nick , you dont have enough points to request a hero. Herorequests cost 1000 points.
+  }
+  else {
+    if (%herorequestInProgress = 1) {
+    msg $chan Sorry $nick, %herorequestBy already opened a herorequest. Please wait until that one's finished. | return
+    }
+    set %requestedHero $2
+    set %herorequestBy $nick
+    set %herorequestInProgress 1
+    writeini -n Points.ini $+(#,.,$nick) Points $calc($readini(Points.ini,n, $+(#,.,$nick),Points) - 1000)
+    writeini -n Points.ini $+(#,.,$nick) RedeemedHerorequests $calc($readini(Points.ini,n, $+(#,.,$nick),RedeemedHerorequests) + 1)
+    herorequestreminder $chan
+  }
+}
+
+alias -l herorequestreminder {
+  if ( %herorequestInProgress = 1 ) {
+     msg $1 There's an open Herorequest by %herorequestBy , @VITALIC_DOTA2 will play %requestedHero in the next game.
+    .timerHerorequest 1 600 herorequestreminder $1
+  }
+}
+
+on *:TEXT:!herorequestfulfilled:#: {
+  if ($nick isop #) {
+    set %requestedHero Keiner
+    set %herorequestBy noone
+    set %herorequestInProgress 0
+  }
+}
+
+
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
     Help Section ---------------------------------------------------------------------------------------------------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
 */ 
 
+/*
 on *:TEXT:!help:#: { 
   if (%floodhelp.basic) { return }
   set -u180 %floodhelp.basic On
@@ -180,5 +225,6 @@ on *:text:!help &:#: {
       msg $chan $nick , while guessing is allowed, you can place your guess using "!guess <deathcount>". If you guess correctly, you'll be awarded with 100 points.
     }
   }
+ */
   
 }
