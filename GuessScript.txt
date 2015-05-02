@@ -78,6 +78,7 @@ on *:JOIN:#: {
   else {
     writeini -n Points.ini %topic Points 0
     writeini -n Points.ini %topic RedeemedHerorequests 0
+    writeini -n Points.ini %topic RedeemedAnalysisRequests 0
   }
 }
 
@@ -154,23 +155,22 @@ alias -l add.pts {
     !herorequest section ---------------------------------------------------------------------------------------------------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
 */ 
-
 on *:TEXT:!herorequest &:#: { 
   if (%floodherorequest) { return }
-  set -u180 %floodhelp.basic On
+  set -u180 %herorequest On
   var %topic $+($chan,.,$nick)
   var %points $readini(Points.ini,%topic,Points)
-  if (%points < 1000) {
-    msg $chan Sorry $nick , you dont have enough points to request a hero. Herorequests cost 1000 points.
+  if (%points < 500) {
+    msg $chan Sorry $nick , you dont have enough points to request a hero. Herorequests cost 500 points.
   }
   else {
-    if (%herorequestInProgress = 1) {
+    if (%herorequestInProgress == 1) {
     msg $chan Sorry $nick, %herorequestBy already opened a herorequest. Please wait until that one's finished. | return
     }
     set %requestedHero $2
     set %herorequestBy $nick
     set %herorequestInProgress 1
-    writeini -n Points.ini $+(#,.,$nick) Points $calc($readini(Points.ini,n, $+(#,.,$nick),Points) - 1000)
+    writeini -n Points.ini $+(#,.,$nick) Points $calc($readini(Points.ini,n, $+(#,.,$nick),Points) - 500)
     writeini -n Points.ini $+(#,.,$nick) RedeemedHerorequests $calc($readini(Points.ini,n, $+(#,.,$nick),RedeemedHerorequests) + 1)
     herorequestreminder $chan
   }
@@ -183,7 +183,7 @@ alias -l herorequestreminder {
   }
 }
 
-on *:TEXT:!herorequestfulfilled:#: {
+on *:TEXT:!hrdone:#: {
   if ($nick isop #) {
     set %requestedHero Keiner
     set %herorequestBy noone
@@ -191,6 +191,31 @@ on *:TEXT:!herorequestfulfilled:#: {
   }
 }
 
+
+/* -----------------------------------------------------------------------------------------------------------------------------------------------
+    !replayanalysis section ---------------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------------------
+*/ 
+on *:TEXT:!replayanalyse:#: { 
+  if (%floodreplay) { return }
+  set -u30 %floodreplay On
+  var %topic $+($chan,.,$nick)
+  var %points $readini(Points.ini,%topic,Points)
+  if (%points < 1000) {
+    msg $chan Sorry $nick , you dont have enough points to request a replay analysis. This request costs 1000 points.
+  }
+  else {
+    if ($readini(AnalysisRequests.ini, n, ActiveRequests, $nick) == 1) {
+     msg $chan Hey $nick, you already opened a request. @VITALIC_DOTA2 will contact you soon. | return
+    }
+    var %analysisrequestBy $nick
+    writeini -n Points.ini $+(#,.,$nick) Points $calc($readini(Points.ini,n, $+(#,.,$nick),Points) - 1000)
+    writeini -n Points.ini $+(#,.,$nick) RedeemedAnalysisRequests $calc($readini(Points.ini,n, $+(#,.,$nick),RedeemedAnalysisRequests) + 1)
+    writeini -n AnalysisRequests.ini ActiveRequests $nick 1
+    msg $chan $nick  has used 1000 points to get a first person replay analysis from @VITALIC_DOTA2
+    msg $chan @ $nick VITALIC will contact you soon
+  }
+}
 
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
     Help Section ---------------------------------------------------------------------------------------------------------------------------------
