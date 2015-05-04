@@ -1,0 +1,20 @@
+-----------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------- Changelog of VITALIC_DOTA2s Twitch Channel Chatbot ----------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+V0.1.1 - 04.05.15
+
+Errors fixed:
+- Users were able to use !herorequest despite having too few points
+- !hrdone did not work properly, because of a wrong condition
+- Timers activated even tho a game got aborted by using !result <x>
+- Userentries with only 0 Points and no used bounties were not deleted from the Points.ini file.
+  Important note: This solution will ONLY!! work if the bot is'nt active in more than one channel. If the bot and user share more than 1 channel,
+  the removal of Points.ini entries will not work properly.
+
+New functions:
+- Implemented !abort to stop the current guessing round
+  This command will work while a game is running. (Time between !start and !result)
+ 
+- Implemented !restart to reset the timer and delete all guesses
+  This command will only work while users are allowed to guess
