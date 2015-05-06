@@ -2,6 +2,14 @@
 --------------------------------------- Changelog of VITALIC_DOTA2s Twitch Channel Chatbot ----------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------
 
+V0.1.2 - 06.05.15
+Errors fixed:
+- Previous solution to: Userentries with only 0 Points and no used bounties were not deleted from the Points.ini file. did not work.
+  Fixed it by correcting the Event to "part" which is the counterpart to "join".
+  You dont need to mind that anymore: This solution will ONLY!! work if the bot is'nt active in more than one channel.
+  This solution will always work.
+- Fixed a bug, where a winner recieved no points for winning if he left the channel with 0 points and no redeems before the game ended.
+
 V0.1.1 - 04.05.15
 
 Errors fixed:
