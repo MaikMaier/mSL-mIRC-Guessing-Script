@@ -149,7 +149,15 @@ on *:TEXT:!result &:#: {
     var %currentUser = $readini(GuessNumbersToUsers.ini, n, Correlation, %guessnumberToCompute) 
     if ($readini(Guesses.ini, n, Guesses, %currentUser) == $2) {
       msg $chan %currentuser guessed correctly, congratulations.
-      writeini -n Points.ini $+(#,.,%currentUser) Points $calc($readini(Points.ini,n, $+(#,.,%currentUser),Points) + 100)
+      var %topic $+($chan,.,%currentUser)
+      if ($readini(Points.ini, n, %topic, Points) == $null) {
+        writeini -n Points.ini %topic Points 100
+        writeini -n Points.ini %topic RedeemedHerorequests 0
+        writeini -n Points.ini %topic RedeemedAnalysisRequests 0
+      }
+      else {
+        writeini -n Points.ini $+(#,.,%currentUser) Points $calc($readini(Points.ini,n, $+(#,.,%currentUser),Points) + 100)
+      }
       /inc %winnercount
     }
     /inc %guessnumberToCompute
