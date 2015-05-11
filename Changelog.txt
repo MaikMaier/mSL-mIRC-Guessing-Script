@@ -2,6 +2,13 @@
 --------------------------------------- Changelog of VITALIC_DOTA2s Twitch Channel Chatbot ----------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------
 
+V0.1.3 - 10.05.15
+Errors fixed:
+- You can no longer use !result more than once. It did not check whether there is a active game
+
+New functions:
+- Implemented new guessing-goals. Either XPM GPM Kills or Death are now choosen by random. XPM and GPM allow guessers to be 50 points off.
+
 V0.1.2 - 06.05.15
 Errors fixed:
 - Previous solution to: Userentries with only 0 Points and no used bounties were not deleted from the Points.ini file. did not work.
