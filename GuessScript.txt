@@ -1,12 +1,10 @@
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
    -----------------------------This Script contains the complete Chatbot for VITALIC_DOTA2s Twitch Channel---------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
-   ----------------------------------------------------------Version 0.1.2------------------------------------------------------------------------
+   ----------------------------------------------------------Version 0.1.3------------------------------------------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
 */ 
-
-
-
+   
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
    mmr reporting system --------------------------------------------------------------------------------------------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
@@ -36,6 +34,7 @@ on *:TEXT:!mmr *:#: {
      ------ on join / leave ------
      -----------------------------
 */ 
+
 on *:JOIN:#: {
   var %topic $+($chan,.,$nick)
   if ($readini(Points.ini, n, %topic, Points) != $null) {
@@ -60,9 +59,31 @@ on *:PART:#: {
 }
 
 /*   --------------------------------
-     ------ main guessing part ------
+     ---------- points part ---------
      --------------------------------
 */ 
+
+on *:text:!points:#:{
+  if ((%floodpoints) || ($($+(%,floodpoints.,$nick),2))) { return }
+  set -u10 %floodpoints On
+  set -u30 %floodpoints. $+ $nick On
+  msg # $nick has $readini(Points.ini,$+(#,.,$nick),Points) total points.
+}
+ 
+on $*:text:/!points (add|remove)/Si:#: {
+  if ($nick isop #) {
+    if ($0 < 3) { 
+      msg # Insufficient parameters: Use !points <add|remove> <user> [number] | return 
+    }
+    writeini -n Points.ini $+(#,.,$3) Points $calc($readini(Points.ini,$+(#,.,$3),Points) $iif($2 == add,+,-) $iif($4 isnum,$4,1))
+    msg $chan $3 now has $readini(Points.ini, n, $+(#,.,$3),Points) total points. 
+  }
+  else { msg $chan This command is only available to moderators. }
+}
+
+alias -l add.pts {
+  writeini -n Points.ini $1 Points $calc($readini(Points.ini, n, $1,Points) + 1)
+}
 
 alias -l addPoints {
   if ($1 !isnum) { echo 2 -st $1 is not a number. It needs to be a number. | halt }
@@ -92,30 +113,18 @@ alias dorempoints {
   echo -a Removed points for %topic
 }
  
-on *:text:!points:#:{
-  if ((%floodpoints) || ($($+(%,floodpoints.,$nick),2))) { return }
-  set -u10 %floodpoints On
-  set -u30 %floodpoints. $+ $nick On
-  msg # $nick has $readini(Points.ini,$+(#,.,$nick),Points) total points.
-}
- 
-on $*:text:/!points (add|remove)/Si:#: {
-  if ($nick isop #) {
-    if ($0 < 3) { 
-      msg # Insufficient parameters: Use !points <add|remove> <user> [number] | return 
-    }
-    writeini -n Points.ini $+(#,.,$3) Points $calc($readini(Points.ini,$+(#,.,$3),Points) $iif($2 == add,+,-) $iif($4 isnum,$4,1))
-    msg $chan $3 now has $readini(Points.ini, n, $+(#,.,$3),Points) total points. 
-  }
-  else { msg $chan This command is only available to moderators. }
-}
+/*   --------------------------------
+     ------ main guessing part ------
+     --------------------------------
+*/ 
 
 on *:TEXT:!start:#: {
   if ($nick isop #) {
     if (%gameinprogess == 1) { msg # A game is already in progress. Please end it before starting a new one. | return }
-    msg $chan A new round of guessing has started. Viewers can now guess how often VITALIC will die in this game.
+    set %whatToGuess $randomNumberBetween1and4
+    msg $chan $gameIsStartingMsg
+    msg $chan You can use the command !guess <number> to make a guess.
     startbetting
-    msg $chan You can use the command !guess <deathcount> to make a guess.
     .timer1 1 180 msg $chan 2 Minutes left to place your guess.
     .timer2 1 240 msg $chan 1 Minute left to place your guess.
     .timer3 1 300 endbetting   
@@ -125,7 +134,7 @@ on *:TEXT:!start:#: {
 }
 
 on *:TEXT:!guess &:#: {
-  if ($2- !isnum) { msg # Wrong use, you need to place a guess with: !guess <putyourguessnumberhere> | return }
+  if ($2- !isnum) { msg # Wrong use, you need to place a guess with: !guess <number> | return }
   if (%lock == 0) {
     if ($readini(Guesses.ini, n, Voters, $nick) != 1) {
       msg $chan Thanks for your guess $nick
@@ -143,11 +152,12 @@ on *:TEXT:!guess &:#: {
 
 on *:TEXT:!result &:#: {
   if (%lock == 0) { msg # Guessing is still enabled. Options are !restart or !abort | return }
+  if (%gameinprogress == 0) { msg # There is currently no active game. | return }
   var %guessnumberToCompute = 1 
   var %winnercount = 0
   while (%guessnumberToCompute <= %guesscount) {
     var %currentUser = $readini(GuessNumbersToUsers.ini, n, Correlation, %guessnumberToCompute) 
-    if ($readini(Guesses.ini, n, Guesses, %currentUser) == $2) {
+    if ($checkPlayerGuess(%currentUser, $2) == 1) {
       msg $chan %currentuser guessed correctly, congratulations.
       var %topic $+($chan,.,%currentUser)
       if ($readini(Points.ini, n, %topic, Points) == $null) {
@@ -197,7 +207,7 @@ on *:TEXT:!restart:#: {
 
       msg $chan Lets start this all over again. All guesses got deleted and the timers reset.
       startbetting
-      msg $chan You can  now use the command !guess <deathcount> again, to make a guess.
+      msg $chan You can  now use the command !guess <number> again, to make a guess.
       .timer1 1 180 msg $chan 2 Minutes left to place your guess.
       .timer2 1 240 msg $chan 1 Minute left to place your guess.
       .timer3 1 300 endbetting   
@@ -216,8 +226,43 @@ alias -l endbetting {
    set %lock 1
 }
 
-alias -l add.pts {
-  writeini -n Points.ini $1 Points $calc($readini(Points.ini, n, $1,Points) + 1)
+alias -l randomNumberBetween1and4 {
+   return $rand(1,4)
+}
+
+alias -l checkPlayerGuess {
+  if ((whatToGuess != 3) && (whatToGuess != 4)) {
+    if ( $readini(Guesses.ini, n, Guesses, $1) == $2 ) {
+      return 1
+    }
+    else {
+      return 0
+    }
+  }
+  else {
+    var %tempStorage $readini(Guesses.ini, n, Guesses, $1)
+    if ( (%tempStorage <= $calc($2 + 50)) && (%tempStorage >= $calc($2 - 50))) {
+      return 1
+    }
+    else {
+      return 0
+    }
+  }
+}
+
+alias -l gameIsStartingMsg {
+   if (%whatToGuess == 1) {
+     return A new round of guessing has started. Viewers can now guess how often VITALIC will die in this game.
+   }
+   if (%whatToGuess == 2) {
+     return A new round of guessing has started. Viewers can now guess how many kills VITALIC will get in this game.
+   }
+   if (%whatToGuess == 3) {
+     return A new round of guessing has started. Viewers can now guess how much GPM VITALIC will achieve in this game. Every guess is allowed to be up to 50 points off of the result to be accepted as correct.
+   }
+   if (%whatToGuess == 4) {
+     return A new round of guessing has started. Viewers can now guess how much XPM VITALIC will achieve in this game. Every guess is allowed to be up to 50 points off of the result to be accepted as correct.
+   }
 }
 
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
@@ -261,9 +306,10 @@ on *:TEXT:!hrdone:#: {
 
 
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
-    !replayanalysis section ---------------------------------------------------------------------------------------------------------------------------------
+    !replayanalysis section ----------------------------------------------------------------------------------------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
-*/ 
+*/
+
 on *:TEXT:!replayanalyse:#: { 
   if (%floodreplay) { return }
   set -u30 %floodreplay On
