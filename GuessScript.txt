@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
    -----------------------------This Script contains the complete Chatbot for VITALIC_DOTA2s Twitch Channel---------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
-   ----------------------------------------------------------Version 0.1.3------------------------------------------------------------------------
+   ----------------------------------------------------------Version 0.1.4------------------------------------------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
 */ 
    
@@ -9,7 +9,6 @@
    mmr reporting system --------------------------------------------------------------------------------------------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
 */ 
-
 
 on *:TEXT:!mmr:#: { 
   if ((%floodmmr) || ($($+(%,floodmmr.,$nick),2))) { return }
@@ -63,11 +62,21 @@ on *:PART:#: {
      --------------------------------
 */ 
 
+on *:text:!pointsof &:#:{
+  if ((%floodpointsof) || ($($+(%,floodpointsof.,$nick),2))) { return }
+  if ($nick isop #) {
+  set -u10 %floodpointsof On
+  set -u30 %floodpointsof. $+ $nick On
+  msg # $nick has $readini(Points.ini,$+(#,.,$nick),Points) total points.
+  }
+  else { msg $chan Only moderators can check others points. }
+}
+ 
 on *:text:!points:#:{
   if ((%floodpoints) || ($($+(%,floodpoints.,$nick),2))) { return }
   set -u10 %floodpoints On
   set -u30 %floodpoints. $+ $nick On
-  msg # $nick has $readini(Points.ini,$+(#,.,$nick),Points) total points.
+  msg # $2 has $readini(Points.ini,$+(#,.,$2),Points) total points.
 }
  
 on $*:text:/!points (add|remove)/Si:#: {
@@ -231,7 +240,7 @@ alias -l randomNumberBetween1and4 {
 }
 
 alias -l checkPlayerGuess {
-  if ((whatToGuess != 3) && (whatToGuess != 4)) {
+  if ((%whatToGuess != 3) && (%whatToGuess != 4)) {
     if ( $readini(Guesses.ini, n, Guesses, $1) == $2 ) {
       return 1
     }
@@ -241,7 +250,7 @@ alias -l checkPlayerGuess {
   }
   else {
     var %tempStorage $readini(Guesses.ini, n, Guesses, $1)
-    if ( (%tempStorage <= $calc($2 + 50)) && (%tempStorage >= $calc($2 - 50))) {
+    if ( (%tempStorage <= $calc($2 + 25)) && (%tempStorage >= $calc($2 - 25)) ) {
       return 1
     }
     else {
@@ -258,10 +267,10 @@ alias -l gameIsStartingMsg {
      return A new round of guessing has started. Viewers can now guess how many kills VITALIC will get in this game.
    }
    if (%whatToGuess == 3) {
-     return A new round of guessing has started. Viewers can now guess how much GPM VITALIC will achieve in this game. Every guess is allowed to be up to 50 points off of the result to be accepted as correct.
+     return A new round of guessing has started. Viewers can now guess how much GPM VITALIC will achieve in this game. Every guess is allowed to be up to 25 points off of the result to be accepted as correct.
    }
    if (%whatToGuess == 4) {
-     return A new round of guessing has started. Viewers can now guess how much XPM VITALIC will achieve in this game. Every guess is allowed to be up to 50 points off of the result to be accepted as correct.
+     return A new round of guessing has started. Viewers can now guess how much XPM VITALIC will achieve in this game. Every guess is allowed to be up to 25 points off of the result to be accepted as correct.
    }
 }
 
@@ -336,34 +345,9 @@ on *:TEXT:!replayanalyse:#: {
    -----------------------------------------------------------------------------------------------------------------------------------------------
 */ 
 
-/*
-on *:TEXT:!help:#: { 
-  if (%floodhelp.basic) { return }
-  set -u180 %floodhelp.basic On
-  msg $chan  Please specify which help section you want by using !help guessing or !help mmr
-}
 
-on *:text:!help &:#: {
-  if ((%floodhelp. $+ $2)) { return }
-  set -u180 %floodhelp. $+ $2 On
-  if ($2 == mmr) {
-    if ($nick isop #) {
-      msg $chan $nick , you can set the Solo or Party MMR by useing "!mmr solo xxx" or "!mmr party xxx".
-      msg $chan Viewers cannot set mmr, they can view it by useing "!mmr" without parameters.
-    }
-    else {
-      msg $chan $nick , you can view VITALICs current mmr by using "!mmr".
-    }
-  }
-  if ($2 == guessing) {
-    if ($nick isop #) {
-      msg $chan $nick , you can start a new guessing round by using "!start". In the following 5 minutes, viewers will be allowed to guess VITALICs deathcount by using "!guess <number>".
-      msg $chan After the 5 min guess phase is over, you can provide the correct answer using "!result <deathcount>".
-    }
-    else {
-      msg $chan $nick , while guessing is allowed, you can place your guess using "!guess <deathcount>". If you guess correctly, you'll be awarded with 100 points.
-    }
-  }
- */
-  
+on *:TEXT:!commands:#: { 
+  if (%floodhelp.commands) { return }
+  set -u180 %floodhelp.commands On
+  msg $chan Hey $nick , please check the channels description for a overview over the betting system.
 }
