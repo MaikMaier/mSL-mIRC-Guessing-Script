@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
    -----------------------------This Script contains the complete Chatbot for VITALIC_DOTA2s Twitch Channel---------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
-   ----------------------------------------------------------Version 0.1.4------------------------------------------------------------------------
+   ----------------------------------------------------------Version 0.1.4----beta----------------------------------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
 */ 
    
@@ -61,34 +61,33 @@ on *:PART:#: {
      ---------- points part ---------
      --------------------------------
 */ 
-
-on *:text:!pointsof &:#:{
-  if ((%floodpointsof) || ($($+(%,floodpointsof.,$nick),2))) { return }
-  if ($nick isop #) {
-  set -u10 %floodpointsof On
-  set -u30 %floodpointsof. $+ $nick On
-  msg # $nick has $readini(Points.ini,$+(#,.,$nick),Points) total points.
+ 
+on $*:text:!points *:#: {
+  if ($0 == 0) {
+    if (($($+(%,floodpoints.,$nick),2))) { return }
+    set -u30 %floodpoints. $+ $nick On
+    msg # $2 has $readini(Points.ini,$+(#,.,$2),Points) total points.
+    return
   }
-  else { msg $chan Only moderators can check others points. }
-}
- 
-on *:text:!points:#:{
-  if ((%floodpoints) || ($($+(%,floodpoints.,$nick),2))) { return }
-  set -u10 %floodpoints On
-  set -u30 %floodpoints. $+ $nick On
-  msg # $2 has $readini(Points.ini,$+(#,.,$2),Points) total points.
-}
- 
-on $*:text:/!points (add|remove)/Si:#: {
-  if ($nick isop #) {
-    if ($0 < 3) { 
-      msg # Insufficient parameters: Use !points <add|remove> <user> [number] | return 
+  if ($0 == 3) { 
+    if ($nick isop #) {
+      writeini -n Points.ini $+(#,.,$3) Points $calc($readini(Points.ini,$+(#,.,$3),Points) $iif($2 == add,+,-) $iif($4 isnum,$4,1))
+      msg $chan $3 now has $readini(Points.ini, n, $+(#,.,$3),Points) total points. 
+    } 
+    else { msg $chan Only moderators can check others points. | return }
+  }
+  else {
+    if ($0 == 1) {
+      if ((%floodpointsof. $+ $2) || ($($+(%,floodpointsof.,$2),2))) { return }
+        if ($nick isop #) {
+          set -u30 %floodpointsof. $+ $nick On
+          msg # $nick has $readini(Points.ini,$+(#,.,$2),Points) total points.
+        }
+        else { msg $chan Only moderators can check others points. }
     }
-    writeini -n Points.ini $+(#,.,$3) Points $calc($readini(Points.ini,$+(#,.,$3),Points) $iif($2 == add,+,-) $iif($4 isnum,$4,1))
-    msg $chan $3 now has $readini(Points.ini, n, $+(#,.,$3),Points) total points. 
   }
-  else { msg $chan This command is only available to moderators. }
 }
+
 
 alias -l add.pts {
   writeini -n Points.ini $1 Points $calc($readini(Points.ini, n, $1,Points) + 1)
@@ -351,3 +350,5 @@ on *:TEXT:!commands:#: {
   set -u180 %floodhelp.commands On
   msg $chan Hey $nick , please check the channels description for a overview over the betting system.
 }
+  
+
