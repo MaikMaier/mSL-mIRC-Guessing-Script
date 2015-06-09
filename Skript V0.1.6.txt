@@ -1,10 +1,24 @@
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
    -----------------------------This Script contains the complete Chatbot for VITALIC_DOTA2s Twitch Channel---------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
-   ----------------------------------------------------------Version 0.1.4----beta----------------------------------------------------------------
+   ----------------------------------------------------------Version 0.1.6------------------------------------------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
 */ 
    
+   
+/* -----------------------------------------------------------------------------------------------------------------------------------------------
+   BotVersion ------------------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------------------
+*/    
+  
+on *:TEXT:!version:#: { 
+  if ( %floodvers ) { return }
+  if ($nick isop #) {
+    set -u600 %floodmmr On
+    msg $chan Active Bot Version: 0.1.6
+  }
+}
+    
 /* -----------------------------------------------------------------------------------------------------------------------------------------------
    mmr reporting system --------------------------------------------------------------------------------------------------------------------------
    -----------------------------------------------------------------------------------------------------------------------------------------------
@@ -62,29 +76,31 @@ on *:PART:#: {
      --------------------------------
 */ 
  
-on $*:text:!points *:#: {
-  if ($0 == 0) {
+on *:TEXT:!points*:#: {
+  if ($0 == 1) {
     if (($($+(%,floodpoints.,$nick),2))) { return }
     set -u30 %floodpoints. $+ $nick On
-    msg # $2 has $readini(Points.ini,$+(#,.,$2),Points) total points.
+    msg # $nick has $readini(Points.ini,$+(#,.,$nick),Points) total points.
     return
   }
-  if ($0 == 3) { 
+  if ($0 == 2) {
     if ($nick isop #) {
-      writeini -n Points.ini $+(#,.,$3) Points $calc($readini(Points.ini,$+(#,.,$3),Points) $iif($2 == add,+,-) $iif($4 isnum,$4,1))
-      msg $chan $3 now has $readini(Points.ini, n, $+(#,.,$3),Points) total points. 
-    } 
+      var %topic $+($chan,.,$2)
+      if ($readini(Points.ini, n, %topic, Points) == $null) { msg $chan Check for typos, there's no $2 | return }
+      msg # $2 has $readini(Points.ini,$+(#,.,$2),Points) total points.
+      return
+    }
     else { msg $chan Only moderators can check others points. | return }
   }
-  else {
-    if ($0 == 1) {
-      if ((%floodpointsof. $+ $2) || ($($+(%,floodpointsof.,$2),2))) { return }
-        if ($nick isop #) {
-          set -u30 %floodpointsof. $+ $nick On
-          msg # $nick has $readini(Points.ini,$+(#,.,$2),Points) total points.
-        }
-        else { msg $chan Only moderators can check others points. }
-    }
+  if ($0 == 4) { 
+    if ($nick isop #) {
+      var %topic $+($chan,.,$3)
+      if ($readini(Points.ini, n, %topic, Points) == $null) { msg $chan Check for typos, there's no $3 | return }
+      writeini -n Points.ini $+(#,.,$3) Points $calc($readini(Points.ini,$+(#,.,$3),Points) $iif($2 == add,+,-) $iif($4 isnum,$4,1))
+      msg $chan $3 now has $readini(Points.ini, n, $+(#,.,$3),Points) total points. 
+      return
+    } 
+    else { msg $chan Only moderators can check others points. | return }
   }
 }
 
@@ -129,12 +145,16 @@ alias dorempoints {
 on *:TEXT:!start:#: {
   if ($nick isop #) {
     if (%gameinprogess == 1) { msg # A game is already in progress. Please end it before starting a new one. | return }
+    msg $chan /subscribers
+    msg $chan A new round of guessing has started. Viewers can guess the outcome of the current game.
     set %whatToGuess $randomNumberBetween1and4
     msg $chan $gameIsStartingMsg
     msg $chan You can use the command !guess <number> to make a guess.
     startbetting
-    .timer1 1 180 msg $chan 2 Minutes left to place your guess.
-    .timer2 1 240 msg $chan 1 Minute left to place your guess.
+    .timermsg 1 8 msg $chan /me wishes you good luck. Lets go!
+    .timer0 1 8 msg $chan /subscribersoff
+    .timer1 1 180 msg $chan /me 2 Minutes left to place your guess.
+    .timer2 1 240 msg $chan /me 1 Minute left to place your guess.
     .timer3 1 300 endbetting   
     .timer4 1 302 msg $chan Guessing is now locked.
   }
@@ -145,14 +165,31 @@ on *:TEXT:!guess &:#: {
   if ($2- !isnum) { msg # Wrong use, you need to place a guess with: !guess <number> | return }
   if (%lock == 0) {
     if ($readini(Guesses.ini, n, Voters, $nick) != 1) {
-      msg $chan Thanks for your guess $nick
+      if ( (%whatToGuess == 3) && ($2 <= 50) ) {
+        msg $chan Hey $nick , i got that, but are you sure you want to guess that low? We're guessing GPM currently!
+        writeini -n Guesses.ini Guesses $nick $2
+        writeini -n GuessNumbersToUsers.ini Correlation $calc(%guesscount + 1) $nick
+        writeini -n Guesses.ini Voters $nick 1
+        /inc %guesscount
+        return
+      }
+      if ( (%whatToGuess == 4) && ($2 <= 50) ) {
+        msg $chan Hey $nick , i got that, but are you sure you want to guess that low? We're guessing XPM currently!
+        writeini -n Guesses.ini Guesses $nick $2
+        writeini -n GuessNumbersToUsers.ini Correlation $calc(%guesscount + 1) $nick
+        writeini -n Guesses.ini Voters $nick 1
+        /inc %guesscount
+        return
+      }
+      msg $chan Thank you for your guess $nick
       writeini -n Guesses.ini Guesses $nick $2
       writeini -n GuessNumbersToUsers.ini Correlation $calc(%guesscount + 1) $nick
       writeini -n Guesses.ini Voters $nick 1
       /inc %guesscount
     }
     else {
-      msg $chan I already got a guess from you $nick
+      msg $chan Okay, i changed your guess $nick
+      writeini -n Guesses.ini Guesses $nick $2
     }
   }
   else { msg $chan  Placing guesses is currently disabled. }
@@ -224,6 +261,23 @@ on *:TEXT:!restart:#: {
   else { msg $chan Only moderators can restart guessing. }
 }
 
+on *:TEXT:!whatdidweguess:#: {
+  if (%whatguessflood) { return }
+  set -u180 %whatguessflood On
+  if (%whatToGuess == 1) {
+    msg $chan Death.
+  }
+  if (%whatToGuess == 2) {
+    msg $chan Kills.
+  }
+  if (%whatToGuess == 3) {
+    msg $chan GPM.
+  }
+  if (%whatToGuess == 4) {
+    msg $chan XPM.
+  }
+}
+
 alias -l startbetting {
   set %lock 0
   set %guesscount 0
@@ -260,16 +314,16 @@ alias -l checkPlayerGuess {
 
 alias -l gameIsStartingMsg {
    if (%whatToGuess == 1) {
-     return A new round of guessing has started. Viewers can now guess how often VITALIC will die in this game.
+     return How often will VITALIC die?
    }
    if (%whatToGuess == 2) {
-     return A new round of guessing has started. Viewers can now guess how many kills VITALIC will get in this game.
+     return How many kills will VITALIC achieve?
    }
    if (%whatToGuess == 3) {
-     return A new round of guessing has started. Viewers can now guess how much GPM VITALIC will achieve in this game. Every guess is allowed to be up to 25 points off of the result to be accepted as correct.
+     return How much GPM will VITALIC achieve in this game? Every guess is allowed to be up to 25 points off of the result to be accepted as correct.
    }
    if (%whatToGuess == 4) {
-     return A new round of guessing has started. Viewers can now guess how much XPM VITALIC will achieve in this game. Every guess is allowed to be up to 25 points off of the result to be accepted as correct.
+     return How much XPM will VITALIC achieve in this game? Every guess is allowed to be up to 25 points off of the result to be accepted as correct.
    }
 }
 
@@ -278,7 +332,7 @@ alias -l gameIsStartingMsg {
    -----------------------------------------------------------------------------------------------------------------------------------------------
 */ 
 
-on *:TEXT:!herorequest &:#: { 
+on *:TEXT:!herorequest *:#: { 
   if (%floodherorequest) { return }
   set -u180 %herorequest On
   var %topic $+($chan,.,$nick)
@@ -336,6 +390,47 @@ on *:TEXT:!replayanalyse:#: {
     writeini -n AnalysisRequests.ini ActiveRequests $nick 1
     msg $chan $nick  has used 1000 points to get a first person replay analysis from @VITALIC_DOTA2
     msg $chan @ $nick VITALIC will contact you soon
+    .timerD 1 600 rememberReplayAnalysis $chan $nick
+    .timerE 1 1200 rememberReplayAnalysis $chan $nick
+  }
+}
+
+alias -l rememberReplayAnalysis {
+   if ( $readini(AnalysisRequests.ini, n, ActiveRequests, $nick) == 1 ) {
+     msg $1 @VITALIC_DOTA2, There's an open Replay Analysis Request by $2
+  }
+}
+
+/* -----------------------------------------------------------------------------------------------------------------------------------------------
+    !itembundle section ----------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------------------
+*/
+
+on *:TEXT:!itembundle:#: { 
+  if (%itembundleflood) { return }
+  set -u30 %itembundleflood On
+  var %topic $+($chan,.,$nick)
+  var %points $readini(Points.ini,%topic,Points)
+  if (%points < 1000) {
+    msg $chan Sorry $nick , item bundles cost 1000 points. You only got %points points.
+  }
+  else {
+    if ($readini(Itembundlerequests.ini, n, ActiveRequests, $nick) == 1) {
+     msg $chan Hey $nick, you already requested a bundle. @VITALIC_DOTA2 will contact you soon. | return
+    }
+    var %bundlerequestby $nick
+    writeini -n Points.ini $+(#,.,$nick) Points $calc($readini(Points.ini,n, $+(#,.,$nick),Points) - 1000)
+    writeini -n Itembundlerequests.ini ActiveRequests $nick 1
+    msg $chan $nick  has used 1000 points to get a itembundle from @VITALIC_DOTA2
+    msg $chan @ $nick VITALIC will contact you soon
+    .timerB 1 600 rememberBundleRequest $chan $nick
+    .timerC 1 1200 rememberBundleRequest $chan $nick
+  }
+}
+
+alias -l rememberBundleRequest {
+   if ( $readini(Itembundlerequests.ini, n, ActiveRequests, $2) == 1 ) {
+     msg $1 @VITALIC_DOTA2, There's an open Bundlerequest by $2
   }
 }
 
@@ -350,5 +445,3 @@ on *:TEXT:!commands:#: {
   set -u180 %floodhelp.commands On
   msg $chan Hey $nick , please check the channels description for a overview over the betting system.
 }
-  
-

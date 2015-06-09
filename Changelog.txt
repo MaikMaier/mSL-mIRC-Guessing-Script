@@ -2,11 +2,29 @@
 --------------------------------------- Changelog of VITALIC_DOTA2s Twitch Channel Chatbot ----------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------
 
+V0.1.6 - 08.06.15
+New functions:
+- Subscribers only mode, while giving instructions
+- introduced !whatdidweguess to give you a hint
+- changed some messages to /me for better visibility
+
+V0.1.5 - 03.06.15
+New functions:
+- added a 2nd remote file to block posted links
+
+V0.1.4b - 27.05.15
+Bugfies:
+- fixed a hell of errors from v0.1.4
+
 V0.1.4 - 10.05.15
 New functions:
 - Implemented a very basic !commands
 - Implementet !pointsof <username> to get the points of a specific user
-
+- Users can change their vote now
+- Users get a notification, if their bet is belot 50 while guessing XPM or GPM
+Bugfixes:
+- everything should Work again
+- You now get informed if you mistyped a username at !points <username> or !points <add|ren <Username> <Number>
 
 V0.1.3 - 10.05.15
 Errors fixed:

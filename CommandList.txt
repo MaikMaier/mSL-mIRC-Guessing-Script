@@ -1,0 +1,38 @@
+/* -----------------------------------------------------------------------------------------------------------------------------------------------
+   Guess-Bot -------------------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------------------
+*/    
+  
+
+Admin / Mods
+
+!start							Startet neue runde
+!result <zahl>						beendet runde
+!abort							Bricht die Runde komplett ab
+!restart						Löscht alle abgegebenen Guesses und startet Timer neu
+!points <add | remove>	<username> <Punktezahl>		Fügt user punkte hinzu oder zieht ab
+!pointsof <username>					Informiert über die Punte von <username>
+!hrdone							beendet laufenden herorequest
+!mmr <solo | party> <zahl>				aktualisiert mmr
+
+Viewers
+
+!herorequest <heroname>					Neuer Herorrequest
+!mmr							mmr zahlen
+!guess <zahl>						eigene schätzung abgeben
+!replayanalyse						analyse einlösen
+!commands						refers to the channels description
+!whatdidweguess						gives you the hint what was guessed
+
+/* -----------------------------------------------------------------------------------------------------------------------------------------------
+   Link-Blocker ------------------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------------------
+*/    
+
+!URLPerm ON/OFF = This command will enable/disable the URLs-PERM module.
+!URLPerm Help = This command will give you all the available commands for this module.
+!URLPerm add Nick [Seconds] = This command will add a nickname to the permitted list, if you set seconds then it will automatically expire after the seconds that you have give.
+!URLPerm del Nick = This command will delete an nickname from the permitted list.
+!URLPerm delall = This command will delete all the permitted list from the channel.
+!URLPerm list = This will give the currently list that are on the permitted list on the channel.
+!URLPerm total = This command will give the total nicknames that are in the permitted list.

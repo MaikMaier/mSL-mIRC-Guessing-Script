@@ -1,0 +1,98 @@
+ON *:TEXT:*:#: {
+  tokenize 32 $strip($1-,burci)
+  if ($1 == !urlperm) {
+    .ignore -cu7 $nick
+    if ($nick !isop $chan) { .msg $chan [ $+ $nick $+ ]: You are NOT an channel moderator! | return }
+    if (!$2) { .msg $chan [ $+ $nick $+ ]: Error, Not enough parameters, try again and use one of the list! - (List: on,off,add,del,delall,list,total) | return }
+    var %st = %urlperm_ [ $+ [ $chan ] ]
+    if ($2 == ON) {
+      if (%st) { .msg $chan [ $+ $nick $+ ]: The URLs-PERM module is already enabled! }
+      elseif (!%st) { set %urlperm_ [ $+ [ $chan ] ] 1 | .msg $chan [ $+ $nick $+ ]: The URLs-PERM module has been enabled! }
+    }
+    if ($2 == OFF) {
+      if (!%st) { .msg $chan [ $+ $nick $+ ]: The URLs-PERM module is already disabled! }
+      elseif (%st) { unset %urlperm_ [ $+ [ $chan ] ] | .msg $chan [ $+ $nick $+ ]: The URLs-PERM module has been disabled! }
+    }
+    if ($2 == add) {
+      if ($nick !isop $chan) { .msg $chan [ $+ $nick $+ ]: You are NOT an channel moderator! | return }
+      if (!$3) { .msg $chan [ $+ $nick $+ ]: Error, Not enough parameters, try again and enter the nickname! | return }
+      var %perms = %urlpermlist_ [ $+ [ $chan ] ]
+      if ($istok(%perms,$3,32)) { .msg $chan [ $+ $nick $+ ]: Error, Already exist, this nickname $qt($3) is already into the list! | return }
+      if ($4) && ($4 !isnum) { .msg $chan [ $+ $nick $+ ]: Error, Incorrect parameters, try again and enter the seconds but only numbers! | return }
+      set %urlpermlist_ [ $+ [ $chan ] ] $addtok(%urlpermlist_ [ $+ [ $chan ] ],$3,32)
+      if ($4) { .timer[URL_REMOVE_ $+ $chan $+ _ $+ $3 $+ ] 1 $4 urldel $chan $3 }
+      .msg $chan [ $+ $nick $+ ]: The $qt($3) nickname has been added to the URLs exempt list. - Expires on: $iif($4, $+ $duration($4) $+ ,Never)
+    }
+    if ($2 == del) {
+      if ($nick !isop $chan) { .msg $chan [ $+ $nick $+ ]: You are NOT an channel moderator! | return }
+      if (!$3) { .msg $chan [ $+ $nick $+ ]: Error, Not enough parameters, try again and enter the nickname! | return }
+      var %perms = %urlpermlist_ [ $+ [ $chan ] ]
+      if (!$istok(%perms,$3,32)) { .msg $chan [ $+ $nick $+ ]: Error, Not exist, this nickname $qt($3) is NOT into the list! | return }
+      set %urlpermlist_ [ $+ [ $chan ] ] $remtok(%urlpermlist_ [ $+ [ $chan ] ],$3,1,32)
+      .timer[URL_REMOVE_ $+ $chan $+ _ $+ $3 $+ ] off
+      .msg $chan [ $+ $nick $+ ]: The $qt($3) nickname has been removed from the URLs exempt list.
+    }
+    if ($2 == delall) {
+      if ($nick !isop $chan) { .msg $chan [ $+ $nick $+ ]: You are NOT an channel moderator! | return }
+      var %perms = %urlpermlist_ [ $+ [ $chan ] ]
+      if (!%perms) { .msg $chan [ $+ $nick $+ ]: There is NOT any nickname into the list! | return }
+      unset %urlpermlist_ [ $+ [ $chan ] ]
+      .timer[URL_REMOVE_ $+ $chan $+ _*] off
+      .msg $chan [ $+ $nick $+ ]: The URLs-PERM list for $chan channel have been cleared.
+      .msg $chan [ $+ $nick $+ ]: Nick(s): %perms - (Total: $numtok(%perms,32) $+ )
+    }
+    if ($2 == list) {
+      if ($nick !isop $chan) { .msg $chan [ $+ $nick $+ ]: You are NOT an channel moderator! | return }
+      var %l = %urlpermlist_ [ $+ [ $chan ] ]
+      if (!%l) { .msg $chan [ $+ $nick $+ ]: There is NOT any nickname into the list. | return }
+      var %i = 1
+      while (%i <= $numtok(%l,32)) {
+        var %n = $gettok(%l,%i,32)
+        var %tm = $timer([URL_REMOVE_ $+ $chan $+ _ $+ %n $+ ]).secs
+        var %nn = %n ( $+ $iif(%tm,%tm $+ s,Never) $+ )
+        if (%n) { var %tot = $addtok(%tot,%nn,32) }
+        inc %i
+      }
+      if (%tot) { .msg $chan [ $+ $nick $+ ]: The URLs-PERM list is: %tot }
+    }
+    if ($2 == total) {
+      var %l = %urlpermlist_ [ $+ [ $chan ] ]
+      if (!%l) { .msg $chan [ $+ $nick $+ ]: There is NOT any nickname into the list. | return }
+      .msg $chan [ $+ $nick $+ ]: The $chan total URLs-PERM nickname list are:  $+ $numtok(%l,32) $+ 
+    }
+    if ($2 == help) { .msg $chan [ $+ $nick $+ ]: The URLs-PERM module commands are: $1 on/off - $1 add <nick> [seconds] - $1 del <nick> $1 delall - $1 list - $1 total }
+  }
+  if ($me isop $chan) {
+    if ($isurl($1-).all) {
+      var %perm = %urlpermlist_ [ $+ [ $chan ] ]
+      if (!$istok(%perm,$nick,32)) { .msg $chan .timeout $nick 1 }
+    }
+  }
+}
+ 
+alias urldel {
+  if (!$1) { return }
+  var %perm = %urlpermlist_ [ $+ [ $1 ] ]
+  if ($istok(%perm,$2,32)) {
+    set %urlpermlist_ [ $+ [ $1 ] ] $remtok(%urlpermlist_ [ $+ [ $1 ] ],$2,1,32)
+    if (%urlperm_ [ $+ [ $1 ] ]) { .msg $1 [URLs-PERM]: The nickname $qt($2) has been expired and removed from the exempt list. }
+  }
+}
+alias url_pattern {
+var %domain com|edu|gov|mil|net|org|biz|info|name|museum|us|ca|uk|tv|ru|de|to|co|fm|ro|me|be
+var %link /(?<=^|\s)((?>\S{3,8}:\/\/|w{3}\56)\S+)|\56( $+ %domain $+ )\b/iS
+return %link
+}
+alias isurl {
+  noop $regex(isurl,$1-,$url_pattern)
+  if ($prop == all) {
+    var %a 1,%url
+    while ($regml(isurl,%a) != $null) {
+      %url = %url $v1
+      inc %a
+    }
+    return $iif(%url,%url,0)
+  }
+  return $iif($prop isnum 0-,$regml(isurl,$prop),$iif($regml(isurl,0),$true,$false))
+}
+
